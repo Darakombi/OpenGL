@@ -1,0 +1,14 @@
+# Directories
+bin/
+bin-int/
+obj/
+GLEW/
+GLFW/
+Debug/
+
+# Visual Studio files
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
