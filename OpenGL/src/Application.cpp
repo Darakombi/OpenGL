@@ -5,24 +5,11 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <ctime>
 
-#define ASSERT(x) if(!(x)) __debugbreak();
-#define GLCall(x) GLClearError();\
-	x;\
-	ASSERT(GLLogCall(#x, __FILE__, __LINE__))
-
-static void GLClearError() {
-	while (glGetError() != GL_NO_ERROR);
-}
-
-static bool GLLogCall(const char* function, const char* file, int line) {
-	while (GLenum error = glGetError()) {
-		std::cout << "[OpenGL Error] (" << error << ") in "
-			<< function << ':' << file << " on line " << line << '.' << std::endl;
-		return false;
-	}
-	return true;
-}
+#include "Renderer.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
 
 struct ShaderProgramSource {
 	std::string VertexSource;
@@ -96,8 +83,28 @@ static unsigned int CreateShader(std::string& vertextShader, std::string& fragme
 	return program;
 }
 
-int main(void)
+struct Color {
+	float r = (float)(rand() % 1000) / 1000;
+	float g = (float)(rand() % 1000) / 1000;
+	float b = (float)(rand() % 1000) / 1000;
+};
+
+static void LerpFloat(float& from, float& to, const float t) {
+	if (std::fabs(from - to) < t / 20) {
+		to = (float)(rand() % 1000) / 1000;
+	}
+	from += (to - from) * t;
+}
+static void LerpColor(Color& from, Color& to, const float t) {
+	LerpFloat(from.r, to.r, t);
+	LerpFloat(from.g, to.g, t);
+	LerpFloat(from.b, to.b, t);
+}
+
+int main()
 {
+	srand(time(NULL));
+
 	GLFWwindow* window;
 
 	/* Initialize the library */
@@ -138,41 +145,23 @@ int main(void)
 		2, 3, 0
 	};
 
-	//Vertext array structure
 	unsigned int vertextArrayObject;
 	GLCall(glGenVertexArrays(1, &vertextArrayObject));
 	GLCall(glBindVertexArray(vertextArrayObject));
 
-	//Vertex buffer structure
-	unsigned int vertexBufferObject;
-	GLCall(glGenBuffers(1, &vertexBufferObject));
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW));
+	VertexBuffer vb(positions, sizeof(positions));
 
-	//Vertex attribute definition (interpretation of the vbo)
 	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
 	GLCall(glEnableVertexAttribArray(0));
 
-	//Index object structure
-	unsigned int indexBufferObject;
-	GLCall(glGenBuffers(1, &indexBufferObject));
-	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferObject));
-	GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW));
-
+	IndexBuffer ib(indices, sizeof(indices) / sizeof(unsigned int));
 
 	ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
-
 	unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
 	GLCall(glUseProgram(shader));
-
 	GLCall(int location = glGetUniformLocation(shader, "u_Color"));
 	ASSERT(location != -1);
-
-	/*float r = 0.2f;
-	float g = 0.6f;
-	float b = 0.8f;
-	float increment = 0.00125f;*/
-
+	Color color, targetColor;
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
 	GLCall(glBindVertexArray(0));
 	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
@@ -184,24 +173,16 @@ int main(void)
 		/* Render here */
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		GLCall(glUseProgram(shader));
-		GLCall(glUniform4f(location, 0.2, 0.4, 0.6, 1.0f));
+		LerpColor(color, targetColor, 0.0075);
 
-		/*GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-		GLCall(glEnableVertexAttribArray(0));
-		GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));*/
+		GLCall(glUseProgram(shader));
+		GLCall(glUniform4f(location, color.r, color.g, color.b, 1.0f));
+
 		GLCall(glBindVertexArray(vertextArrayObject));
 
-		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferObject));
+		ib.Bind();
 
 		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
-
-		/*if (r > 1.0f || r < 0.0f) increment = -increment;
-		r += increment;
-		if (g > 1.0f || g < 0.0f) increment = -increment;
-		g += increment;
-		if (b > 1.0f || b < 0.0f) increment = -increment;
-		b += increment;*/
 
 		/* Swap front and back buffers */
 		glfwSwapBuffers(window);
