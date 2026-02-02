@@ -10,6 +10,7 @@
 #include "Renderer.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "VertexArray.h"
 
 struct ShaderProgramSource {
 	std::string VertexSource;
@@ -116,7 +117,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
+	window = glfwCreateWindow(700, 700, "Hello Boss", NULL, NULL);
 	if (!window)
 	{
 		glfwTerminate();
@@ -145,14 +146,11 @@ int main()
 		2, 3, 0
 	};
 
-	unsigned int vertextArrayObject;
-	GLCall(glGenVertexArrays(1, &vertextArrayObject));
-	GLCall(glBindVertexArray(vertextArrayObject));
-
+	VertexArray va;
 	VertexBuffer vb(positions, sizeof(positions));
-
-	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
-	GLCall(glEnableVertexAttribArray(0));
+	VertexBufferLayout layout;
+	layout.Push<float>(2);
+	va.AddBuffer(vb, layout);
 
 	IndexBuffer ib(indices, sizeof(indices) / sizeof(unsigned int));
 
@@ -161,7 +159,9 @@ int main()
 	GLCall(glUseProgram(shader));
 	GLCall(int location = glGetUniformLocation(shader, "u_Color"));
 	ASSERT(location != -1);
+
 	Color color, targetColor;
+
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
 	GLCall(glBindVertexArray(0));
 	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
@@ -178,8 +178,7 @@ int main()
 		GLCall(glUseProgram(shader));
 		GLCall(glUniform4f(location, color.r, color.g, color.b, 1.0f));
 
-		GLCall(glBindVertexArray(vertextArrayObject));
-
+		va.Bind();
 		ib.Bind();
 
 		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));

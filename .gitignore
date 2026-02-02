@@ -4,7 +4,7 @@ bin-int/
 obj/
 GLEW/
 GLFW/
-Debug/
+Intermediate/
 
 # Visual Studio files
 .vs/
@@ -12,3 +12,4 @@ Debug/
 *.userosscache
 *.suo
 *.sln.docstates
+*.vc*
