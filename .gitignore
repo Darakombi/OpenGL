@@ -12,4 +12,4 @@ Intermediate/
 *.userosscache
 *.suo
 *.sln.docstates
-*.vc*
+OpenGL.vcxproj
