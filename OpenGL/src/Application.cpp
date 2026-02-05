@@ -1,6 +1,9 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -55,7 +58,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(600, 600, "Hello Boss", NULL, NULL);
+	window = glfwCreateWindow(1280, 720, "Hello Boss", NULL, NULL);
 	if (!window)
 	{
 		glfwTerminate();
@@ -80,6 +83,12 @@ int main()
 		 0.5f,  0.5f, 1.0f, 1.0f,
 		-0.5f,  0.5f, 0.0f, 1.0f
 	};
+	/*float positions[] = {
+		400, 400, 0.0f, 0.0f,
+		700, 400, 1.0f, 0.0f,
+		700, 700, 1.0f, 1.0f,
+		400, 700, 0.0f, 1.0f
+	};*/
 
 	unsigned int indices[] = {
 		0, 1, 2,
@@ -95,8 +104,17 @@ int main()
 
 	IndexBuffer ib(indices, sizeof(indices) / sizeof(unsigned int));
 
+	float m = 10.0f;
+	float x = 16.0f / m;
+	float y = 9.0f / m;
+	float z = 1.0f;
+	glm::mat4 proj = glm::ortho(-x, x, -y, y, -z, z);
+
+	//proj *= glm::vec4(1.0f, 1.5f, 0.0f, 1.0f);
+
 	Shader shader("res/shaders/Basic.shader");
 	shader.Bind();
+	shader.SetUniformMat4f("u_MVP", proj);
 
 	Color color, targetColor;
 
@@ -116,7 +134,7 @@ int main()
 
 		shader.Bind();
 		texture.Bind();
-		shader.SetUniform4f("u_Tint", color.r, color.g, color.b, 0.5f);
+		shader.SetUniform4f("u_Tint", color.r, color.g, color.b, 1.0f);
 
 		renderer.Draw(va, ib, shader);
 

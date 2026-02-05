@@ -5,6 +5,7 @@ obj/
 GLEW/
 GLFW/
 Intermediate/
+vendor/
 
 # Visual Studio files
 .vs/
