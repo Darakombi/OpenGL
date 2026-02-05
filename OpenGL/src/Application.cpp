@@ -14,6 +14,7 @@
 #include "VertexArray.h"
 #include "IndexBuffer.h"
 #include "Shader.h"
+#include "Texture.h"
 
 struct Color {
 	float r = (float)(rand() % 1000) / 1000;
@@ -72,10 +73,10 @@ int main()
 	std::cout << glGetString(GL_VERSION) << std::endl;
 
 	float positions[] = {
-		-0.5f, -0.5f,
-		 0.5f, -0.5f,
-		 0.5f,  0.5f,
-		-0.5f,  0.5f
+		-0.5f, -0.5f, 0.0f, 0.0f,
+		 0.5f, -0.5f, 1.0f, 0.0f,
+		 0.5f,  0.5f, 1.0f, 1.0f,
+		-0.5f,  0.5f, 0.0f, 1.0f
 	};
 
 	unsigned int indices[] = {
@@ -87,6 +88,7 @@ int main()
 	VertexBuffer vb(positions, sizeof(positions));
 	VertexBufferLayout layout;
 	layout.Push<float>(2);
+	layout.Push<float>(2);
 	va.AddBuffer(vb, layout);
 
 	IndexBuffer ib(indices, sizeof(indices) / sizeof(unsigned int));
@@ -96,6 +98,9 @@ int main()
 
 	Color color, targetColor;
 	shader.SetUniform4f("u_Color", color.r, color.g, color.b, 1.0f);
+
+	Texture texture("res/textures/lion.png");
+	shader.SetUniform1i("u_Texture", 0);
 
 	va.Unbind();
 	vb.Unbind();
@@ -114,6 +119,7 @@ int main()
 		LerpColor(color, targetColor, 0.0075f);
 
 		shader.Bind();
+		texture.Bind();
 		shader.SetUniform4f("u_Color", color.r, color.g, color.b, 1.0f);
 
 		renderer.Draw(va, ib, shader);
