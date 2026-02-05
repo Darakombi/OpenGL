@@ -10,8 +10,9 @@
 #include "Renderer.h"
 
 #include "VertexBuffer.h"
-#include "IndexBuffer.h"
+#include "VertexBufferLayout.h"
 #include "VertexArray.h"
+#include "IndexBuffer.h"
 #include "Shader.h"
 
 struct Color {
@@ -32,9 +33,15 @@ static void LerpColor(Color& from, Color& to, const float t) {
 	LerpFloat(from.b, to.b, t);
 }
 
+void processInput(GLFWwindow* window) {
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+		glfwSetWindowShouldClose(window, GL_TRUE);
+	}
+}
+
 int main()
 {
-	srand(time(NULL));
+	srand((unsigned int)time(NULL));
 
 	GLFWwindow* window;
 
@@ -95,21 +102,21 @@ int main()
 	ib.Unbind();
 	shader.Unbind();
 
+	Renderer renderer;
+
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
 	{
 		/* Render here */
-		glClear(GL_COLOR_BUFFER_BIT);
+		renderer.Clear();
 
-		LerpColor(color, targetColor, 0.0075);
-
-		va.Bind();
-		ib.Bind();
+		processInput(window);
+		LerpColor(color, targetColor, 0.0075f);
 
 		shader.Bind();
 		shader.SetUniform4f("u_Color", color.r, color.g, color.b, 1.0f);
 
-		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+		renderer.Draw(va, ib, shader);
 
 		/* Swap front and back buffers */
 		glfwSwapBuffers(window);
