@@ -34,7 +34,7 @@ static void LerpColor(Color& from, Color& to, const float t) {
 	LerpFloat(from.b, to.b, t);
 }
 
-void processInput(GLFWwindow* window) {
+static void processInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
@@ -64,13 +64,15 @@ int main()
 
 	/* Make the window's context current */
 	glfwMakeContextCurrent(window);
-
 	glfwSwapInterval(1);
 
 	if (glewInit() != GLEW_OK)
 		std::cout << "Error";
 
 	std::cout << glGetString(GL_VERSION) << std::endl;
+
+	GLCall(glEnable(GL_BLEND));
+	GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
 	float positions[] = {
 		-0.5f, -0.5f, 0.0f, 0.0f,
@@ -97,15 +99,9 @@ int main()
 	shader.Bind();
 
 	Color color, targetColor;
-	shader.SetUniform4f("u_Color", color.r, color.g, color.b, 1.0f);
 
 	Texture texture("res/textures/lion.png");
 	shader.SetUniform1i("u_Texture", 0);
-
-	va.Unbind();
-	vb.Unbind();
-	ib.Unbind();
-	shader.Unbind();
 
 	Renderer renderer;
 
@@ -120,7 +116,7 @@ int main()
 
 		shader.Bind();
 		texture.Bind();
-		shader.SetUniform4f("u_Color", color.r, color.g, color.b, 1.0f);
+		shader.SetUniform4f("u_Tint", color.r, color.g, color.b, 0.5f);
 
 		renderer.Draw(va, ib, shader);
 
