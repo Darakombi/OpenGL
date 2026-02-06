@@ -24,9 +24,7 @@
 #include "Texture.h"
 
 struct Color {
-	float r = (float)(rand() % 1000) / 1000;
-	float g = (float)(rand() % 1000) / 1000;
-	float b = (float)(rand() % 1000) / 1000;
+	float r = 0.0f, g = 0.0f, b = 0.0f;
 };
 
 static void LerpFloat(float& from, float& to, const float t) {
@@ -60,6 +58,10 @@ const static glm::vec2 getRatio(const int v1, const int v2)
 	}
 
 	return { v1 / max, v2 / max };
+}
+
+const static int getNumInRange(int min, int max) {
+	return (rand() % (max - min + 1)) + min;
 }
 
 int main()
@@ -107,10 +109,10 @@ int main()
 		-0.5f,  0.5f, 0.0f, 1.0f
 	};*/
 	float positions[] = {
-		0, 0, 0.0f, 0.0f,
-		400, 0, 1.0f, 0.0f,
-		400, 400, 1.0f, 1.0f,
-		0, 400, 0.0f, 1.0f
+		0.0f  , 0.0f  , 0.0f, 0.0f,
+		400.0f, 0.0f  , 1.0f, 0.0f,
+		400.0f, 400.0f, 1.0f, 1.0f,
+		0.0f  , 400.0f, 0.0f, 1.0f
 	};
 
 	unsigned int indices[] = {
@@ -131,7 +133,7 @@ int main()
 	float h = static_cast<float>(windowHeight);
 
 	glm::mat4 proj = glm::ortho(0.0f, w, 0.0f, h);
-	glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(-200, -200, 0));
+	glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
 
 	Shader shader("res/shaders/Basic.shader");
 	shader.Bind();
@@ -147,7 +149,11 @@ int main()
 	ImGui_ImplGlfwGL3_Init(window, true);
 	ImGui::StyleColorsDark();
 
-	glm::vec3 translation(200, 200, 0);
+	glm::vec3 translation(0, 0, 0);
+
+	int tick = 0;
+	int change = 10000;
+	int x = 0, y = 0;
 
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
@@ -155,26 +161,30 @@ int main()
 		/* Render here */
 		renderer.Clear();
 
+		tick++;
+
 		processInput(window);
 		LerpColor(color, targetColor, 0.0075f);
 
 		ImGui_ImplGlfwGL3_NewFrame();
 
-		glm::mat4 model = glm::translate(glm::mat4(1.0f), translation);
-
-		glm::mat4 mvp = proj * view * model;
-
 		shader.Bind();
 		texture.Bind();
 		shader.SetUniform4f("u_Tint", color.r, color.g, color.b, 1.0f);
-		shader.SetUniformMat4f("u_MVP", mvp);
 
+		if (tick % change == 0) {
+			x = rand() % ((int)w - 400);
+			y = rand() % ((int)h - 400);
+		}
+		glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, 0));
+
+		glm::mat4 mvp = proj * view * model;
+		shader.SetUniformMat4f("u_MVP", mvp);
 		renderer.Draw(va, ib, shader);
 
-		{
-			ImGui::SliderFloat3("Translation", &translation.x, 0.0f, w);  
-			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		}
+		ImGui::SliderInt("Ticks", &change, 1, 10000);
+		//ImGui::SliderFloat3("Translation", &translation.x, 0.0f, w);
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 		ImGui::Render();
 		ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
