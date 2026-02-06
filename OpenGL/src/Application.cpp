@@ -4,11 +4,15 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw_gl3.h>
+
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <sstream>
 #include <ctime>
+#include <array>
 
 #include "Renderer.h"
 
@@ -43,6 +47,21 @@ static void processInput(GLFWwindow* window) {
 	}
 }
 
+const static glm::vec2 getRatio(const int v1, const int v2)
+{
+	int max = (v1 >= v2) ? v2 : v1;
+	int min = (max == v2) ? v1 : v2;
+
+	while (min != 0)
+	{
+		int temp = max % min;
+		max = min;
+		min = temp;
+	}
+
+	return { v1 / max, v2 / max };
+}
+
 int main()
 {
 	srand((unsigned int)time(NULL));
@@ -58,7 +77,11 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(1280, 720, "Hello Boss", NULL, NULL);
+	int windowWidth = 1280;
+	int windowHeight = 720;
+	glm::vec2 windowRatio = getRatio(windowWidth, windowHeight);
+
+	window = glfwCreateWindow(windowWidth, windowHeight, "Hello Boss", NULL, NULL);
 	if (!window)
 	{
 		glfwTerminate();
@@ -77,18 +100,18 @@ int main()
 	GLCall(glEnable(GL_BLEND));
 	GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
-	float positions[] = {
+	/*float positions[] = {
 		-0.5f, -0.5f, 0.0f, 0.0f,
 		 0.5f, -0.5f, 1.0f, 0.0f,
 		 0.5f,  0.5f, 1.0f, 1.0f,
 		-0.5f,  0.5f, 0.0f, 1.0f
-	};
-	/*float positions[] = {
-		400, 400, 0.0f, 0.0f,
-		700, 400, 1.0f, 0.0f,
-		700, 700, 1.0f, 1.0f,
-		400, 700, 0.0f, 1.0f
 	};*/
+	float positions[] = {
+		0, 0, 0.0f, 0.0f,
+		400, 0, 1.0f, 0.0f,
+		400, 400, 1.0f, 1.0f,
+		0, 400, 0.0f, 1.0f
+	};
 
 	unsigned int indices[] = {
 		0, 1, 2,
@@ -104,17 +127,14 @@ int main()
 
 	IndexBuffer ib(indices, sizeof(indices) / sizeof(unsigned int));
 
-	float m = 10.0f;
-	float x = 16.0f / m;
-	float y = 9.0f / m;
-	float z = 1.0f;
-	glm::mat4 proj = glm::ortho(-x, x, -y, y, -z, z);
+	float w = static_cast<float>(windowWidth);
+	float h = static_cast<float>(windowHeight);
 
-	//proj *= glm::vec4(1.0f, 1.5f, 0.0f, 1.0f);
+	glm::mat4 proj = glm::ortho(0.0f, w, 0.0f, h);
+	glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(-200, -200, 0));
 
 	Shader shader("res/shaders/Basic.shader");
 	shader.Bind();
-	shader.SetUniformMat4f("u_MVP", proj);
 
 	Color color, targetColor;
 
@@ -122,6 +142,12 @@ int main()
 	shader.SetUniform1i("u_Texture", 0);
 
 	Renderer renderer;
+
+	ImGui::CreateContext();
+	ImGui_ImplGlfwGL3_Init(window, true);
+	ImGui::StyleColorsDark();
+
+	glm::vec3 translation(200, 200, 0);
 
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
@@ -132,11 +158,26 @@ int main()
 		processInput(window);
 		LerpColor(color, targetColor, 0.0075f);
 
+		ImGui_ImplGlfwGL3_NewFrame();
+
+		glm::mat4 model = glm::translate(glm::mat4(1.0f), translation);
+
+		glm::mat4 mvp = proj * view * model;
+
 		shader.Bind();
 		texture.Bind();
 		shader.SetUniform4f("u_Tint", color.r, color.g, color.b, 1.0f);
+		shader.SetUniformMat4f("u_MVP", mvp);
 
 		renderer.Draw(va, ib, shader);
+
+		{
+			ImGui::SliderFloat3("Translation", &translation.x, 0.0f, w);  
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		}
+
+		ImGui::Render();
+		ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
 
 		/* Swap front and back buffers */
 		glfwSwapBuffers(window);
@@ -145,6 +186,8 @@ int main()
 		glfwPollEvents();
 	}
 
+	ImGui_ImplGlfwGL3_Shutdown();
+	ImGui::DestroyContext();
 	glfwTerminate();
 	return 0;
 }
