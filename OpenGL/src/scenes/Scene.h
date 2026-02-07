@@ -1,5 +1,10 @@
 #pragma once
 
+#include <iostream>
+#include <string>
+#include <vector>
+#include <functional>
+
 namespace scene {
 
 	class Scene {
@@ -10,6 +15,23 @@ namespace scene {
 		virtual void OnUpdate(float deltaTime) {}
 		virtual void OnRender() {}
 		virtual void OnImGuiRender() {}
+	};
+
+	class SceneMenu : public Scene {
+	public:
+		SceneMenu(Scene*& currentScenePointer);
+
+		void OnImGuiRender();
+
+		template<typename T>
+		void RegisterScene(const std::string name) {
+			std::cout << "Registering scene " << name << std::endl;
+
+			m_Scenes.push_back(std::make_pair(name, []() {return new T(); }));
+		}
+	private:
+		Scene*& m_CurrentScene;
+		std::vector < std::pair<std::string, std::function<Scene* ()>>> m_Scenes;
 	};
 
 }

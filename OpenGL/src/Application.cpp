@@ -23,6 +23,9 @@
 #include "Shader.h"
 #include "Texture.h"
 
+#include "scenes/SceneClearColor.h"
+#include "scenes/SceneTexture2d.h"
+
 struct Color {
 	float r = 0.0f, g = 0.0f, b = 0.0f;
 };
@@ -70,7 +73,6 @@ int main()
 
 	GLFWwindow* window;
 
-	/* Initialize the library */
 	if (!glfwInit())
 		return -1;
 
@@ -78,7 +80,6 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	/* Create a windowed mode window and its OpenGL context */
 	int windowWidth = 1280;
 	int windowHeight = 720;
 	glm::vec2 windowRatio = getRatio(windowWidth, windowHeight);
@@ -90,7 +91,6 @@ int main()
 		return -1;
 	}
 
-	/* Make the window's context current */
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
 
@@ -102,99 +102,51 @@ int main()
 	GLCall(glEnable(GL_BLEND));
 	GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
-	/*float positions[] = {
-		-0.5f, -0.5f, 0.0f, 0.0f,
-		 0.5f, -0.5f, 1.0f, 0.0f,
-		 0.5f,  0.5f, 1.0f, 1.0f,
-		-0.5f,  0.5f, 0.0f, 1.0f
-	};*/
-	float positions[] = {
-		0.0f  , 0.0f  , 0.0f, 0.0f,
-		400.0f, 0.0f  , 1.0f, 0.0f,
-		400.0f, 400.0f, 1.0f, 1.0f,
-		0.0f  , 400.0f, 0.0f, 1.0f
-	};
-
-	unsigned int indices[] = {
-		0, 1, 2,
-		2, 3, 0
-	};
-
-	VertexArray va;
-	VertexBuffer vb(positions, sizeof(positions));
-	VertexBufferLayout layout;
-	layout.Push<float>(2);
-	layout.Push<float>(2);
-	va.AddBuffer(vb, layout);
-
-	IndexBuffer ib(indices, sizeof(indices) / sizeof(unsigned int));
-
-	float w = static_cast<float>(windowWidth);
-	float h = static_cast<float>(windowHeight);
-
-	glm::mat4 proj = glm::ortho(0.0f, w, 0.0f, h);
-	glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
-
-	Shader shader("res/shaders/Basic.shader");
-	shader.Bind();
-
-	Color color, targetColor;
-
-	Texture texture("res/textures/lion.png");
-	shader.SetUniform1i("u_Texture", 0);
-
 	Renderer renderer;
 
 	ImGui::CreateContext();
 	ImGui_ImplGlfwGL3_Init(window, true);
 	ImGui::StyleColorsDark();
 
-	glm::vec3 translation(0, 0, 0);
+	scene::Scene* currentScene = nullptr;
+	scene::SceneMenu* sceneMenu = new scene::SceneMenu(currentScene);
+	currentScene = sceneMenu;
 
-	int tick = 0;
-	int change = 10000;
-	int x = 0, y = 0;
+	sceneMenu->RegisterScene<scene::SceneClearColor>("Clear color");
+	sceneMenu->RegisterScene<scene::SceneTexture2d>("Texture");
 
-	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
 	{
-		/* Render here */
+		GLCall(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
 		renderer.Clear();
-
-		tick++;
-
-		processInput(window);
-		LerpColor(color, targetColor, 0.0075f);
 
 		ImGui_ImplGlfwGL3_NewFrame();
 
-		shader.Bind();
-		texture.Bind();
-		shader.SetUniform4f("u_Tint", color.r, color.g, color.b, 1.0f);
+		if (currentScene) {
+			currentScene->OnUpdate(0.0f);
+			currentScene->OnRender();
 
-		if (tick % change == 0) {
-			x = rand() % ((int)w - 400);
-			y = rand() % ((int)h - 400);
+			ImGui::Begin("Scene");
+
+			if (currentScene != sceneMenu && ImGui::Button("<-")) {
+				delete currentScene;
+				currentScene = sceneMenu;
+			}
+			currentScene->OnImGuiRender();
+
+			ImGui::End();
 		}
-		glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, 0));
-
-		glm::mat4 mvp = proj * view * model;
-		shader.SetUniformMat4f("u_MVP", mvp);
-		renderer.Draw(va, ib, shader);
-
-		ImGui::SliderInt("Ticks", &change, 1, 10000);
-		//ImGui::SliderFloat3("Translation", &translation.x, 0.0f, w);
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 		ImGui::Render();
 		ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
 
-		/* Swap front and back buffers */
 		glfwSwapBuffers(window);
-
-		/* Poll for and process events */
 		glfwPollEvents();
 	}
+
+	if (currentScene != sceneMenu)
+		delete sceneMenu;
+	else delete currentScene;
 
 	ImGui_ImplGlfwGL3_Shutdown();
 	ImGui::DestroyContext();
